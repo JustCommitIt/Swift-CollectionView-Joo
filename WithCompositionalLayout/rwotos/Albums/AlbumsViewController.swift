@@ -63,6 +63,7 @@ extension AlbumsViewController {
     collectionView.backgroundColor = .systemBackground
     collectionView.delegate = self
     collectionView.register(AlbumItemCell.self, forCellWithReuseIdentifier: AlbumItemCell.reuseIdentifer)
+    collectionView.register(HeaderView.self, forSupplementaryViewOfKind: AlbumsViewController.sectionHeaderElementKind, withReuseIdentifier: HeaderView.reuseIdentifier)
     albumsCollectionView = collectionView
   }
 
@@ -78,6 +79,23 @@ extension AlbumsViewController {
         cell.title = albumItem.albumTitle
         return cell
     }
+    dataSource.supplementaryViewProvider = { (
+      collectionView: UICollectionView,
+      kind: String,
+      indexPath: IndexPath)
+        -> UICollectionReusableView? in
+
+      guard let supplementaryView = collectionView.dequeueReusableSupplementaryView(
+        ofKind: kind,
+        withReuseIdentifier: HeaderView.reuseIdentifier,
+        for: indexPath) as? HeaderView else {
+          fatalError("Cannot create header view")
+      }
+
+      supplementaryView.label.text = Section.allCases[indexPath.section].rawValue
+      return supplementaryView
+    }
+
 
     let snapshot = snapshotForCurrentState()
     dataSource.apply(snapshot, animatingDifferences: false)
@@ -105,7 +123,16 @@ extension AlbumsViewController {
       heightDimension: groupHeight)
     let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitem: item, count: isWide ? 4 : 2)
 
+    let headerSize = NSCollectionLayoutSize(
+      widthDimension: .fractionalWidth(1.0),
+      heightDimension: .estimated(44))
+    let sectionHeader = NSCollectionLayoutBoundarySupplementaryItem(
+      layoutSize: headerSize,
+      elementKind: AlbumsViewController.sectionHeaderElementKind,
+      alignment: .top)
+
     let section = NSCollectionLayoutSection(group: group)
+    section.boundarySupplementaryItems = [sectionHeader]
 
     return section
   }
