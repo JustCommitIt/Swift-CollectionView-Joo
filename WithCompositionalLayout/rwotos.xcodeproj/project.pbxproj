@@ -129,8 +129,7 @@
 				E2288A35230CA22800C76AE4 /* alta_via_1 */,
 				E2288A34230CA22800C76AE4 /* Lyngen */,
 			);
-			name = PhotoData;
-			path = ../PhotoData;
+			path = PhotoData;
 			sourceTree = "<group>";
 		};
 		E2288A31230C9CF400C76AE4 /* SharedViews */ = {
