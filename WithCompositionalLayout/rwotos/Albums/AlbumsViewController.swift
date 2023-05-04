@@ -64,6 +64,13 @@ extension AlbumsViewController {
     collectionView.delegate = self
     collectionView.register(AlbumItemCell.self, forCellWithReuseIdentifier: AlbumItemCell.reuseIdentifer)
     collectionView.register(HeaderView.self, forSupplementaryViewOfKind: AlbumsViewController.sectionHeaderElementKind, withReuseIdentifier: HeaderView.reuseIdentifier)
+    collectionView.register(
+      FeaturedAlbumItemCell.self,
+      forCellWithReuseIdentifier: FeaturedAlbumItemCell.reuseIdentifer)
+    collectionView.register(
+      SharedAlbumItemCell.self,
+      forCellWithReuseIdentifier: SharedAlbumItemCell.reuseIdentifer)
+
     albumsCollectionView = collectionView
   }
 
@@ -72,12 +79,39 @@ extension AlbumsViewController {
       <Section, AlbumItem>(collectionView: albumsCollectionView) {
         (collectionView: UICollectionView, indexPath: IndexPath, albumItem: AlbumItem) -> UICollectionViewCell? in
 
-        guard let cell = collectionView.dequeueReusableCell(
-          withReuseIdentifier: AlbumItemCell.reuseIdentifer,
-          for: indexPath) as? AlbumItemCell else { fatalError("Could not create new cell") }
-        cell.featuredPhotoURL = albumItem.imageItems[0].thumbnailURL
-        cell.title = albumItem.albumTitle
-        return cell
+        let sectionType = Section.allCases[indexPath.section]
+        switch sectionType {
+        case .featuredAlbums:
+          guard let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: FeaturedAlbumItemCell.reuseIdentifer,
+            for: indexPath) as? FeaturedAlbumItemCell
+          else { fatalError("Could not create new cell") }
+
+          cell.featuredPhotoURL = albumItem.imageItems[0].thumbnailURL
+          cell.title = albumItem.albumTitle
+          cell.totalNumberOfImages = albumItem.imageItems.count
+          return cell
+
+        case .sharedAlbums:
+          guard let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: SharedAlbumItemCell.reuseIdentifer,
+            for: indexPath) as? SharedAlbumItemCell
+          else { fatalError("Could not create new cell") }
+
+          cell.featuredPhotoURL = albumItem.imageItems[0].thumbnailURL
+          cell.title = albumItem.albumTitle
+          return cell
+
+        case .myAlbums:
+          guard let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: AlbumItemCell.reuseIdentifer,
+            for: indexPath) as? AlbumItemCell
+          else { fatalError("Could not create new cell") }
+
+          cell.featuredPhotoURL = albumItem.imageItems[0].thumbnailURL
+          cell.title = albumItem.albumTitle
+          return cell
+        }
     }
     dataSource.supplementaryViewProvider = { (
       collectionView: UICollectionView,
@@ -103,12 +137,21 @@ extension AlbumsViewController {
 
   func generateLayout() -> UICollectionViewLayout {
     let layout = UICollectionViewCompositionalLayout { (sectionIndex: Int,
-      layoutEnvironment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection? in
+      layoutEnvironment: NSCollectionLayoutEnvironment)
+        -> NSCollectionLayoutSection? in
       let isWideView = layoutEnvironment.container.effectiveContentSize.width > 500
-      return self.generateMyAlbumsLayout(isWide: isWideView)
+
+      let sectionLayoutKind = Section.allCases[sectionIndex]
+      switch (sectionLayoutKind) {
+      case .featuredAlbums: return self.generateFeaturedAlbumsLayout(
+        isWide: isWideView)
+      case .sharedAlbums: return self.generateSharedlbumsLayout()
+      case .myAlbums: return self.generateMyAlbumsLayout(isWide: isWideView)
+      }
     }
     return layout
   }
+
 
   func generateMyAlbumsLayout(isWide: Bool) -> NSCollectionLayoutSection {
     let itemSize = NSCollectionLayoutSize(
@@ -133,6 +176,78 @@ extension AlbumsViewController {
 
     let section = NSCollectionLayoutSection(group: group)
     section.boundarySupplementaryItems = [sectionHeader]
+
+    return section
+  }
+
+  func generateFeaturedAlbumsLayout(isWide: Bool) -> NSCollectionLayoutSection {
+    let itemSize = NSCollectionLayoutSize(
+      widthDimension: .fractionalWidth(1.0),
+      heightDimension: .fractionalWidth(2/3))
+    let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+    // Show one item plus peek on narrow screens,
+    // two items plus peek on wider screens
+    let groupFractionalWidth = isWide ? 0.475 : 0.95
+    let groupFractionalHeight: Float = isWide ? 1/3 : 2/3
+    let groupSize = NSCollectionLayoutSize(
+      widthDimension: .fractionalWidth(CGFloat(groupFractionalWidth)),
+      heightDimension: .fractionalWidth(CGFloat(groupFractionalHeight)))
+    let group = NSCollectionLayoutGroup.horizontal(
+      layoutSize: groupSize,
+      subitem: item,
+      count: 1)
+    group.contentInsets = NSDirectionalEdgeInsets(
+      top: 5,
+      leading: 5,
+      bottom: 5,
+      trailing: 5)
+
+    let headerSize = NSCollectionLayoutSize(
+      widthDimension: .fractionalWidth(1.0),
+      heightDimension: .estimated(44))
+    let sectionHeader = NSCollectionLayoutBoundarySupplementaryItem(
+      layoutSize: headerSize,
+      elementKind: AlbumsViewController.sectionHeaderElementKind,
+      alignment: .top)
+
+    let section = NSCollectionLayoutSection(group: group)
+    section.boundarySupplementaryItems = [sectionHeader]
+    section.orthogonalScrollingBehavior = .groupPaging
+
+    return section
+  }
+
+  func generateSharedlbumsLayout() -> NSCollectionLayoutSection {
+    let itemSize = NSCollectionLayoutSize(
+      widthDimension: .fractionalWidth(1.0),
+      heightDimension: .fractionalWidth(1.0))
+    let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+    let groupSize = NSCollectionLayoutSize(
+      widthDimension: .absolute(140),
+      heightDimension: .absolute(186))
+    let group = NSCollectionLayoutGroup.vertical(
+      layoutSize: groupSize,
+      subitem: item,
+      count: 1)
+    group.contentInsets = NSDirectionalEdgeInsets(
+      top: 5,
+      leading: 5,
+      bottom: 5,
+      trailing: 5)
+
+    let headerSize = NSCollectionLayoutSize(
+      widthDimension: .fractionalWidth(1.0),
+      heightDimension: .estimated(44))
+    let sectionHeader = NSCollectionLayoutBoundarySupplementaryItem(
+      layoutSize: headerSize,
+      elementKind: AlbumsViewController.sectionHeaderElementKind,
+      alignment: .top)
+
+    let section = NSCollectionLayoutSection(group: group)
+    section.boundarySupplementaryItems = [sectionHeader]
+    section.orthogonalScrollingBehavior = .groupPaging
 
     return section
   }
