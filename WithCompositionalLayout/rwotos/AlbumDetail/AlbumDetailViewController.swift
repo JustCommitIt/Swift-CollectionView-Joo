@@ -84,11 +84,12 @@ extension AlbumDetailViewController {
       widthDimension: .fractionalWidth(1.0),
       heightDimension: .fractionalHeight(1.0))
     let fullPhotoItem = NSCollectionLayoutItem(layoutSize: itemSize)
+    fullPhotoItem.contentInsets = NSDirectionalEdgeInsets(top: 2, leading: 2, bottom: 2, trailing: 2)
 
     let groupSize = NSCollectionLayoutSize(
       widthDimension: .fractionalWidth(1.0),
-      heightDimension: .fractionalWidth(2/3))
-    let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitem: fullPhotoItem, count: 1)
+      heightDimension: .fractionalWidth(1/3))
+    let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitem: fullPhotoItem, count: 2)
 
     let section = NSCollectionLayoutSection(group: group)
 
