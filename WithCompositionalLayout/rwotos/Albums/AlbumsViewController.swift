@@ -152,7 +152,6 @@ extension AlbumsViewController {
     return layout
   }
 
-
   func generateMyAlbumsLayout(isWide: Bool) -> NSCollectionLayoutSection {
     let itemSize = NSCollectionLayoutSize(
       widthDimension: .fractionalWidth(1.0),
