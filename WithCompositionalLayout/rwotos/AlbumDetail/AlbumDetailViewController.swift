@@ -61,6 +61,7 @@ extension AlbumDetailViewController {
     collectionView.backgroundColor = .systemBackground
     collectionView.delegate = self
     collectionView.register(PhotoItemCell.self, forCellWithReuseIdentifier: PhotoItemCell.reuseIdentifer)
+    collectionView.register(SyncingBadgeView.self, forSupplementaryViewOfKind: AlbumDetailViewController.syncingBadgeKind, withReuseIdentifier: SyncingBadgeView.reuseIdentifier)
     albumDetailCollectionView = collectionView
   }
 
@@ -74,17 +75,49 @@ extension AlbumDetailViewController {
         cell.photoURL = detailItem.thumbnailURL
         return cell
     }
+    dataSource.supplementaryViewProvider = {
+      (
+      collectionView: UICollectionView,
+      kind: String,
+      indexPath: IndexPath)
+        -> UICollectionReusableView? in
+      // 1
+      if let badgeView = collectionView.dequeueReusableSupplementaryView(
+        ofKind: kind,
+        withReuseIdentifier: SyncingBadgeView.reuseIdentifier,
+        for: indexPath) as? SyncingBadgeView {
+        // 2
+        let hasSyncBadge = indexPath.row % Int.random(in: 1...6) == 0
+        badgeView.isHidden = !hasSyncBadge
+        return badgeView
+      } else {
+        fatalError("Cannot create new supplementary")
+      }
+    }
 
     let snapshot = snapshotForCurrentState()
     dataSource.apply(snapshot, animatingDifferences: false)
+    
   }
 
   func generateLayout() -> UICollectionViewLayout {
+    // Syncing badge
+    let syncingBadgeAnchor = NSCollectionLayoutAnchor(
+      edges: [.top, .trailing],
+      fractionalOffset: CGPoint(x: -0.3, y: 0.3))
+    let syncingBadge = NSCollectionLayoutSupplementaryItem(
+      layoutSize: NSCollectionLayoutSize(
+        widthDimension: .absolute(20),
+        heightDimension: .absolute(20)),
+      elementKind: AlbumDetailViewController.syncingBadgeKind,
+      containerAnchor: syncingBadgeAnchor)
+
     // First Type : Full
     let fullPhotoItem = NSCollectionLayoutItem(
       layoutSize: NSCollectionLayoutSize(
         widthDimension: .fractionalWidth(1.0),
-        heightDimension: .fractionalWidth(2/3)))
+        heightDimension: .fractionalWidth(2/3)),
+      supplementaryItems: [syncingBadge])
 
     fullPhotoItem.contentInsets = NSDirectionalEdgeInsets(top: 2, leading: 2, bottom: 2, trailing: 2)
 
@@ -153,8 +186,8 @@ extension AlbumDetailViewController {
     )
 
     let section = NSCollectionLayoutSection(group: nestedGroup)
-
     let layout = UICollectionViewCompositionalLayout(section: section)
+
     return layout
   }
 
