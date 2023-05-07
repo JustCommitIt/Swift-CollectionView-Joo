@@ -29,6 +29,12 @@
 import UIKit
 import SafariServices
 
+enum Section {
+  case main
+}
+
+typealias DataSource = UICollectionViewDiffableDataSource<Section, Video>
+
 class VideosViewController: UICollectionViewController {
   // MARK: - Properties
   private var videoList = Video.allVideos
