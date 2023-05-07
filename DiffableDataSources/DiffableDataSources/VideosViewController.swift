@@ -66,6 +66,23 @@ class VideosViewController: UICollectionViewController {
         cell?.video = video
         return cell
     })
+    // 1
+    dataSource.supplementaryViewProvider = { collectionView, kind, indexPath in
+      // 2
+      guard kind == UICollectionView.elementKindSectionHeader else {
+        return nil
+      }
+      // 3
+      let view = collectionView.dequeueReusableSupplementaryView(
+        ofKind: kind,
+        withReuseIdentifier: SectionHeaderReusableView.reuseIdentifier,
+        for: indexPath) as? SectionHeaderReusableView
+      // 4
+      let section = self.dataSource.snapshot()
+        .sectionIdentifiers[indexPath.section]
+      view?.titleLabel.text = section.title
+      return view
+    }
     return dataSource
   }
 }
@@ -149,10 +166,14 @@ extension VideosViewController: UISearchResultsUpdating {
     definesPresentationContext = true
   }
 }
-
 // MARK: - Layout Handling
 extension VideosViewController {
   private func configureLayout() {
+    collectionView.register(
+      SectionHeaderReusableView.self ,
+      forSupplementaryViewOfKind: UICollectionView .elementKindSectionHeader,
+      withReuseIdentifier: SectionHeaderReusableView .reuseIdentifier
+    )
     collectionView.collectionViewLayout = UICollectionViewCompositionalLayout(sectionProvider: { (sectionIndex, layoutEnvironment) -> NSCollectionLayoutSection? in
       let isPhone = layoutEnvironment.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiom.phone
       let size = NSCollectionLayoutSize(
@@ -165,6 +186,17 @@ extension VideosViewController {
       let section = NSCollectionLayoutSection(group: group)
       section.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
       section.interGroupSpacing = 10
+      // Supplementary header view setup
+      let headerFooterSize = NSCollectionLayoutSize(
+        widthDimension: .fractionalWidth(1.0),
+        heightDimension: .estimated(20)
+      )
+      let sectionHeader = NSCollectionLayoutBoundarySupplementaryItem(
+        layoutSize: headerFooterSize,
+        elementKind: UICollectionView.elementKindSectionHeader,
+        alignment: .top
+      )
+      section.boundarySupplementaryItems = [sectionHeader]
       return section
     })
   }
