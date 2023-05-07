@@ -31,15 +31,12 @@ import SafariServices
 
 class VideosViewController: UICollectionViewController {
   // MARK: - Properties
-  private var videoList = Video.allVideos
+//  private var videoList = Video.allVideos
+  private var sections = Section.allSections
   private var searchController = UISearchController(searchResultsController: nil)
   private lazy var dataSource = makeDataSource()
 
   // MARK: - Value Types
-  enum Section {
-    case main
-  }
-
   typealias DataSource = UICollectionViewDiffableDataSource<Section, Video>
   typealias Snapshot = NSDiffableDataSourceSnapshot<Section, Video>
   
@@ -55,8 +52,10 @@ class VideosViewController: UICollectionViewController {
   // MARK: - Functions
   func applySnapshot(animatingDifferences: Bool = true) {
     var snapshot = Snapshot()
-    snapshot.appendSections([.main])
-    snapshot.appendItems(videoList)
+    snapshot.appendSections(sections)
+    sections.forEach { section in
+      snapshot.appendItems(section.videos, toSection: section)
+    }
     dataSource.apply(snapshot, animatingDifferences: animatingDifferences)
   }
   func makeDataSource() -> DataSource {
@@ -115,20 +114,30 @@ extension VideosViewController {
 // MARK: - UISearchResultsUpdating Delegate
 extension VideosViewController: UISearchResultsUpdating {
   func updateSearchResults(for searchController: UISearchController) {
-    videoList = filteredVideos(for: searchController.searchBar.text)
-    collectionView.reloadData()
+    sections = filteredSections(for: searchController.searchBar.text)
+//    collectionView.reloadData()
+    applySnapshot()
   }
-  
-  func filteredVideos(for queryOrNil: String?) -> [Video] {
-    let videos = Video.allVideos
+
+  func filteredSections(for queryOrNil: String?) -> [Section] {
+    let sections = Section.allSections
+
     guard
       let query = queryOrNil,
       !query.isEmpty
       else {
-        return videos
+        return sections
     }
-    return videos.filter {
-      return $0.title.lowercased().contains(query.lowercased())
+
+    return sections.filter { section in
+      var matches = section.title.lowercased().contains(query.lowercased())
+      for video in section.videos {
+        if video.title.lowercased().contains(query.lowercased()) {
+          matches = true
+          break
+        }
+      }
+      return matches
     }
   }
   
