@@ -29,18 +29,19 @@
 import UIKit
 import SafariServices
 
-enum Section {
-  case main
-}
-
-typealias DataSource = UICollectionViewDiffableDataSource<Section, Video>
-
 class VideosViewController: UICollectionViewController {
   // MARK: - Properties
   private var videoList = Video.allVideos
   private var searchController = UISearchController(searchResultsController: nil)
-  
+  private lazy var dataSource = makeDataSource()
+
   // MARK: - Value Types
+  enum Section {
+    case main
+  }
+
+  typealias DataSource = UICollectionViewDiffableDataSource<Section, Video>
+  typealias Snapshot = NSDiffableDataSourceSnapshot<Section, Video>
   
   // MARK: - Life Cycles
   override func viewDidLoad() {
@@ -48,31 +49,48 @@ class VideosViewController: UICollectionViewController {
     view.backgroundColor = .white
     configureSearchController()
     configureLayout()
+    applySnapshot(animatingDifferences: false)
   }
   
   // MARK: - Functions
+  func applySnapshot(animatingDifferences: Bool = true) {
+    var snapshot = Snapshot()
+    snapshot.appendSections([.main])
+    snapshot.appendItems(videoList)
+    dataSource.apply(snapshot, animatingDifferences: animatingDifferences)
+  }
+  func makeDataSource() -> DataSource {
+    let dataSource = DataSource(
+      collectionView: collectionView,
+      cellProvider: { (collectionView, indexPath, video) -> UICollectionViewCell? in
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "VideoCollectionViewCell", for: indexPath) as? VideoCollectionViewCell
+        cell?.video = video
+        return cell
+    })
+    return dataSource
+  }
 }
 
 // MARK: - UICollectionViewDataSource
 extension VideosViewController {
-  override func collectionView(
-    _ collectionView: UICollectionView,
-    numberOfItemsInSection section: Int
-  ) -> Int {
-    return videoList.count
-  }
+//  override func collectionView(
+//    _ collectionView: UICollectionView,
+//    numberOfItemsInSection section: Int
+//  ) -> Int {
+//    return videoList.count
+//  }
   
-  override func collectionView(
-    _ collectionView: UICollectionView,
-    cellForItemAt indexPath: IndexPath
-  ) -> UICollectionViewCell {
-    let video = videoList[indexPath.row]
-    guard let cell = collectionView.dequeueReusableCell(
-      withReuseIdentifier: "VideoCollectionViewCell",
-      for: indexPath) as? VideoCollectionViewCell else { fatalError() }
-    cell.video = video
-    return cell
-  }
+//  override func collectionView(
+//    _ collectionView: UICollectionView,
+//    cellForItemAt indexPath: IndexPath
+//  ) -> UICollectionViewCell {
+//    let video = videoList[indexPath.row]
+//    guard let cell = collectionView.dequeueReusableCell(
+//      withReuseIdentifier: "VideoCollectionViewCell",
+//      for: indexPath) as? VideoCollectionViewCell else { fatalError() }
+//    cell.video = video
+//    return cell
+//  }
 }
 
 // MARK: - UICollectionViewDelegate
@@ -81,7 +99,10 @@ extension VideosViewController {
     _ collectionView: UICollectionView,
     didSelectItemAt indexPath: IndexPath
   ) {
-    let video = videoList[indexPath.row]
+    guard let video = dataSource.itemIdentifier(for: indexPath) else {
+      return
+    }
+//    let video = videoList[indexPath.row]
     guard let link = video.link else {
       print("Invalid link")
       return
