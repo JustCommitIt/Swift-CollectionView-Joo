@@ -34,12 +34,53 @@ import UIKit
 
 class PetExplorerViewController: UICollectionViewController {
   // MARK: - Properties
-  var adoptions = Set<Pet>()
+  static var adoptions = Set<Pet>()
   lazy var dataSource = makeDataSource()
-  let categoryCellregistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
+  let categoryCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
     var configuration = cell.defaultContentConfiguration()
     configuration.text = item.title
     cell.contentConfiguration = configuration
+    let options = UICellAccessory.OutlineDisclosureOptions(style: .header)
+    let disclosureAccessory = UICellAccessory.outlineDisclosure(options: options)
+    cell.accessories = [disclosureAccessory]
+  }
+  let petCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
+    guard let pet = item.pet else {
+      return
+    }
+    var configuration = cell.defaultContentConfiguration()
+    configuration.text = pet.name
+    configuration.secondaryText = "\(pet.age)세"
+    configuration.image = UIImage(named: pet.imageName)
+    configuration.imageProperties.maximumSize = CGSize(width: 40, height: 40)
+    cell.contentConfiguration = configuration
+
+    if PetExplorerViewController.isAdopted(pet: pet) {
+      var backgroundConfig = UIBackgroundConfiguration.listPlainCell()
+      backgroundConfig.backgroundColor = .systemBlue
+      backgroundConfig.cornerRadius = 5
+      backgroundConfig.backgroundInsets = NSDirectionalEdgeInsets(top: 5, leading: 5, bottom: 5, trailing: 5)
+      cell.backgroundConfiguration = backgroundConfig
+    }
+
+    cell.accessories = [.disclosureIndicator()]
+  }
+  let adoptedPetCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
+    guard let pet = item.pet else {
+      return
+    }
+    var configuration = cell.defaultContentConfiguration()
+    configuration.text = "Your pet: \(pet.name)"
+    configuration.secondaryText = "\(pet.age) years old"
+    configuration.image = UIImage(named: pet.imageName)
+    configuration.imageProperties.maximumSize = CGSize(width: 40, height: 40)
+    cell.contentConfiguration = configuration
+    cell.accessories =  [.disclosureIndicator()]
+  }
+
+
+  static func isAdopted(pet: Pet) -> Bool {
+    PetExplorerViewController.adoptions.contains(pet)
   }
 
   // MARK: - Types
@@ -59,36 +100,100 @@ class PetExplorerViewController: UICollectionViewController {
 
   // MARK: - Functions
   func configureLayout() {
-    let configuration = UICollectionLayoutListConfiguration(appearance: .grouped)
-    collectionView.collectionViewLayout = UICollectionViewCompositionalLayout.list(using: configuration)
+//    let configuration = UICollectionLayoutListConfiguration(appearance: .grouped)
+//    collectionView.collectionViewLayout = UICollectionViewCompositionalLayout.list(using: configuration)
+    // 1
+    let provider =
+      {(_: Int, layoutEnv: NSCollectionLayoutEnvironment) ->
+        NSCollectionLayoutSection? in
+      // 2
+      let configuration = UICollectionLayoutListConfiguration(
+        appearance: .grouped)
+      // 3
+      return NSCollectionLayoutSection.list(
+        using: configuration,
+        layoutEnvironment: layoutEnv)
+    }
+    // 4
+    collectionView.collectionViewLayout =
+      UICollectionViewCompositionalLayout(sectionProvider: provider)
+
   }
 
   func makeDataSource() -> DataSource {
     return DataSource(collectionView: collectionView) {
       collectionView, indexPath, item -> UICollectionViewCell? in
-      return collectionView.dequeueConfiguredReusableCell(
-        using: self.categoryCellregistration, for: indexPath, item: item)
+      if item.pet != nil {
+        guard let section = Section(rawValue: indexPath.section) else {
+          return nil
+        }
+        switch section {
+        case .availablePets:
+          return collectionView.dequeueConfiguredReusableCell(
+            using: self.petCellRegistration, for: indexPath, item: item)
+        case .adoptedPets:
+          return collectionView.dequeueConfiguredReusableCell(
+            using: self.adoptedPetCellRegistration, for: indexPath, item: item)
+        }
+      } else {
+        return collectionView.dequeueConfiguredReusableCell(
+          using: self.categoryCellRegistration, for: indexPath, item: item)
+      }
+    }
+  }
+
+  func updateDataSource(for pet: Pet) {
+    var snapshot = dataSource.snapshot()
+    let items = snapshot.itemIdentifiers
+    let petItem = items.first { item in
+      item.pet == pet
+    }
+    if let petItem = petItem {
+      snapshot.reloadItems([petItem])
+      dataSource.apply(snapshot, animatingDifferences: true, completion: nil)
     }
   }
 
   func applyInitialSnapshots() {
-    var categorySnapshot = NSDiffableDataSourceSnapshot<Section, Item>()
+    // 1
+    var snapshot = NSDiffableDataSourceSnapshot<Section, Item>()
+    // 2
+    snapshot.appendSections(Section.allCases)
+    // 3
+    dataSource.apply(snapshot, animatingDifferences: false)
+
+    var categorySnapshot = NSDiffableDataSourceSectionSnapshot<Item>()
+
+    for category in Pet.Category.allCases {
+      let categoryItem = Item(title: String(describing: category))
+      categorySnapshot.append([categoryItem])
+      let petItems = category.pets.map { Item(pet: $0, title: $0.name) }
+      categorySnapshot.append(petItems, to: categoryItem)
+    }
     let categories = Pet.Category.allCases.map { category in
       return Item(title: String(describing: category))
     }
-    categorySnapshot.appendSections([.availablePets])
-    categorySnapshot.appendItems(categories, toSection: .availablePets)
-    dataSource.apply(categorySnapshot, animatingDifferences: false)
+    dataSource.apply(categorySnapshot, to: .availablePets, animatingDifferences: false)
   }
 }
 
 // MARK: - CollectionView Cells
 extension PetExplorerViewController {
+
+
 }
 
 // MARK: - UICollectionViewDelegate
 extension PetExplorerViewController {
   override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    guard let item = dataSource.itemIdentifier(for: indexPath) else {
+      collectionView.deselectItem(at: indexPath, animated: true)
+      return
+    }
+    guard let pet = item.pet else {
+      return
+    }
+    pushDetailForPet(pet, withAdoptionStatus: PetExplorerViewController.adoptions.contains(pet))
   }
 
   func pushDetailForPet(_ pet: Pet, withAdoptionStatus isAdopted: Bool) {
@@ -106,5 +211,20 @@ extension PetExplorerViewController {
 // MARK: - PetDetailViewControllerDelegate
 extension PetExplorerViewController: PetDetailViewControllerDelegate {
   func petDetailViewController(_ petDetailViewController: PetDetailViewController, didAdoptPet pet: Pet) {
+    PetExplorerViewController.adoptions.insert(pet)
+    updateDataSource(for: pet)
+    // 1
+    var adoptedPetsSnapshot = dataSource.snapshot(for: .adoptedPets)
+    // 2
+    let newItem = Item(pet: pet, title: pet.name)
+    // 3
+    adoptedPetsSnapshot.append([newItem])
+    // 4
+    dataSource.apply(
+      adoptedPetsSnapshot,
+      to: .adoptedPets,
+      animatingDifferences: true,
+      completion: nil)
+
   }
 }
