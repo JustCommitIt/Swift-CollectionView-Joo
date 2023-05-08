@@ -47,9 +47,14 @@ class PetExplorerViewController: UICollectionViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     navigationItem.title = "Pet Explorer"
+    configureLayout()
   }
 
   // MARK: - Functions
+  func configureLayout() {
+    let configuration = UICollectionLayoutListConfiguration(appearance: .grouped)
+    collectionView.collectionViewLayout = UICollectionViewCompositionalLayout.list(using: configuration)
+  }
 }
 
 // MARK: - CollectionView Cells
