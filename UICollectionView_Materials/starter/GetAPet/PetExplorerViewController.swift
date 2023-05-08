@@ -35,6 +35,12 @@ import UIKit
 class PetExplorerViewController: UICollectionViewController {
   // MARK: - Properties
   var adoptions = Set<Pet>()
+  lazy var dataSource = makeDataSource()
+  let categoryCellregistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
+    var configuration = cell.defaultContentConfiguration()
+    configuration.text = item.title
+    cell.contentConfiguration = configuration
+  }
 
   // MARK: - Types
   enum Section: Int, CaseIterable, Hashable {
@@ -48,12 +54,31 @@ class PetExplorerViewController: UICollectionViewController {
     super.viewDidLoad()
     navigationItem.title = "Pet Explorer"
     configureLayout()
+    applyInitialSnapshots()
   }
 
   // MARK: - Functions
   func configureLayout() {
     let configuration = UICollectionLayoutListConfiguration(appearance: .grouped)
     collectionView.collectionViewLayout = UICollectionViewCompositionalLayout.list(using: configuration)
+  }
+
+  func makeDataSource() -> DataSource {
+    return DataSource(collectionView: collectionView) {
+      collectionView, indexPath, item -> UICollectionViewCell? in
+      return collectionView.dequeueConfiguredReusableCell(
+        using: self.categoryCellregistration, for: indexPath, item: item)
+    }
+  }
+
+  func applyInitialSnapshots() {
+    var categorySnapshot = NSDiffableDataSourceSnapshot<Section, Item>()
+    let categories = Pet.Category.allCases.map { category in
+      return Item(title: String(describing: category))
+    }
+    categorySnapshot.appendSections([.availablePets])
+    categorySnapshot.appendItems(categories, toSection: .availablePets)
+    dataSource.apply(categorySnapshot, animatingDifferences: false)
   }
 }
 
